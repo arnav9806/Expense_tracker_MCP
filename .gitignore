@@ -5,7 +5,6 @@ build/
 dist/
 wheels/
 *.egg-info
-expenses.db
 
 # Virtual environments
 .venv
