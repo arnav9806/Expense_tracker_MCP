@@ -86,63 +86,20 @@ logger = logging.getLogger("expense-tracker")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-DB_PATH = os.environ.get(
-    "EXPENSE_DB_PATH",
-    "/app/data/expenses.db"
-)
+DB_PATH = "/tmp/expenses.db"
 CATEGORIES_PATH = os.path.join(BASE_DIR, "categories.json")
 
 mcp = FastMCP("expense-tracker")
 
 
 def get_connection():
-    """Create and return a SQLite database connection."""
+    os.makedirs("/tmp", exist_ok=True)
 
-    try:
-        db_directory = os.path.dirname(os.path.abspath(DB_PATH))
+    conn = sqlite3.connect("/tmp/expenses.db", timeout=30)
+    conn.row_factory = sqlite3.Row
 
-        logger.info("========== SQLITE DEBUG LOGS ==========")
-        logger.info("Application directory: %s", BASE_DIR)
-        logger.info("Database path: %s", DB_PATH)
-        logger.info("Database directory: %s", db_directory)
-        logger.info("Directory exists: %s", os.path.exists(db_directory))
-        logger.info("Directory writable: %s", os.access(db_directory, os.W_OK))
-
-        if os.path.exists(DB_PATH):
-            logger.info("Database file exists: True")
-            logger.info("Database file writable: %s", os.access(DB_PATH, os.W_OK))
-            logger.info("Database file size: %s bytes", os.path.getsize(DB_PATH))
-        else:
-            logger.info("Database file exists: False")
-
-        os.makedirs(db_directory, exist_ok=True)
-
-        # Test directory write permission
-        test_file = os.path.join(db_directory, ".sqlite_write_test")
-
-        try:
-            with open(test_file, "w") as f:
-                f.write("SQLite write permission test")
-
-            os.remove(test_file)
-            logger.info("Directory write test: SUCCESS")
-
-        except Exception:
-            logger.exception("Directory write test: FAILED")
-            raise
-
-        logger.info("Attempting SQLite connection...")
-
-        conn = sqlite3.connect(DB_PATH, timeout=30)
-        conn.row_factory = sqlite3.Row
-
-        logger.info("SQLite connection: SUCCESS")
-
-        return conn
-
-    except Exception:
-        logger.exception("SQLite connection failed")
-        raise
+    logger.info("SQLite connected successfully: /tmp/expenses.db")
+    return conn
 
 def init_db():
     """Create required database tables."""
