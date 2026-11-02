@@ -6,19 +6,15 @@ import io
 import json
 from datetime import datetime
 
-# ============================================================
-# PRODUCTION CONFIGURATION
-# ============================================================
+import logging
+import traceback
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.environ.get("EXPENSE_DB_PATH", "/data/expenses.db")
-
-CATEGORIES_PATH = os.path.join(
-    BASE_DIR,
-    "categories.json"
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
 )
 
-mcp = FastMCP("expense-tracker")
+logger = logging.getLogger("expense-tracker")
 
 # ============================================================
 # LOCAL CONFIGURATION
@@ -83,51 +79,115 @@ mcp = FastMCP("expense-tracker")
 # ============================================================
 # DATABASE HELPERS for PRODUCTION
 # ============================================================
+# ============================================================
+# PRODUCTION CONFIGURATION
+# ============================================================
+
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+DB_PATH = os.environ.get("EXPENSE_DB_PATH", "/data/expenses.db")
+
+CATEGORIES_PATH = os.path.join(BASE_DIR, "categories.json")
+
+mcp = FastMCP("expense-tracker")
+
 
 def get_connection():
     """Create and return a SQLite database connection."""
 
-    # Ensure the parent directory exists. In production, this directory
-    # must be a writable persistent volume supplied by the host.
-    db_directory = os.path.dirname(os.path.abspath(DB_PATH))
-    os.makedirs(db_directory, exist_ok=True)
+    try:
+        db_directory = os.path.dirname(os.path.abspath(DB_PATH))
 
-    conn = sqlite3.connect(DB_PATH, timeout=30)
-    conn.row_factory = sqlite3.Row
+        logger.info("========== SQLITE DEBUG LOGS ==========")
+        logger.info("Application directory: %s", BASE_DIR)
+        logger.info("Database path: %s", DB_PATH)
+        logger.info("Database directory: %s", db_directory)
+        logger.info("Directory exists: %s", os.path.exists(db_directory))
+        logger.info("Directory writable: %s", os.access(db_directory, os.W_OK))
 
-    return conn
+        if os.path.exists(DB_PATH):
+            logger.info("Database file exists: True")
+            logger.info("Database file writable: %s", os.access(DB_PATH, os.W_OK))
+            logger.info("Database file size: %s bytes", os.path.getsize(DB_PATH))
+        else:
+            logger.info("Database file exists: False")
 
+        os.makedirs(db_directory, exist_ok=True)
+
+        # Test directory write permission
+        test_file = os.path.join(db_directory, ".sqlite_write_test")
+
+        try:
+            with open(test_file, "w") as f:
+                f.write("SQLite write permission test")
+
+            os.remove(test_file)
+            logger.info("Directory write test: SUCCESS")
+
+        except Exception:
+            logger.exception("Directory write test: FAILED")
+            raise
+
+        logger.info("Attempting SQLite connection...")
+
+        conn = sqlite3.connect(DB_PATH, timeout=30)
+        conn.row_factory = sqlite3.Row
+
+        logger.info("SQLite connection: SUCCESS")
+
+        return conn
+
+    except Exception:
+        logger.exception("SQLite connection failed")
+        raise
 
 def init_db():
     """Create required database tables."""
 
-    with get_connection() as c:
+    try:
+        logger.info("Initializing SQLite database: %s", DB_PATH)
 
-        # Expenses table
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS expenses(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                date TEXT NOT NULL,
-                amount REAL NOT NULL,
-                category TEXT NOT NULL,
-                subcategory TEXT DEFAULT '',
-                note TEXT DEFAULT ''
-            )
-        """)
+        with get_connection() as c:
 
-        # Budgets table
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS budgets(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                month TEXT NOT NULL,
-                category TEXT NOT NULL,
-                amount REAL NOT NULL,
-                UNIQUE(month, category)
-            )
-        """)
+            logger.info("Creating expenses table...")
+
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS expenses(
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    date TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    category TEXT NOT NULL,
+                    subcategory TEXT DEFAULT '',
+                    note TEXT DEFAULT ''
+                )
+            """)
+
+            logger.info("Expenses table created successfully")
+
+            logger.info("Creating budgets table...")
+
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS budgets(
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    month TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    UNIQUE(month, category)
+                )
+            """)
+
+            logger.info("Budgets table created successfully")
+
+        logger.info("Database initialization completed successfully")
+
+    except Exception:
+        logger.exception("Database initialization failed")
+        raise
 
 
 init_db()
+
 
 # ============================================================
 # VALIDATION HELPERS
