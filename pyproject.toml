@@ -1,7 +1,7 @@
 [project]
 name = "remote-expense-tracker-mcp"
 version = "0.1.0"
-description = "Add your description here"
+description = "Expense Tracker MCP Server"
 readme = "README.md"
 authors = [
     { name = "Arnav Sokal", email = "arnav.100kal@gmail.com" }
@@ -10,6 +10,7 @@ requires-python = ">=3.13"
 dependencies = [
     "fastmcp==2.11.3",
     "mcp==1.13.1",
+    "pydantic==2.11.9",
 ]
 
 [project.scripts]
