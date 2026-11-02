@@ -86,8 +86,10 @@ logger = logging.getLogger("expense-tracker")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-DB_PATH = os.environ.get("EXPENSE_DB_PATH", "/data/expenses.db")
-
+DB_PATH = os.environ.get(
+    "EXPENSE_DB_PATH",
+    "/app/data/expenses.db"
+)
 CATEGORIES_PATH = os.path.join(BASE_DIR, "categories.json")
 
 mcp = FastMCP("expense-tracker")
