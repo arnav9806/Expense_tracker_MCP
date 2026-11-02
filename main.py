@@ -6,32 +6,93 @@ import io
 import json
 from datetime import datetime
 
-
 # ============================================================
-# CONFIGURATION
+# PRODUCTION CONFIGURATION
 # ============================================================
 
-DB_PATH = os.path.join(
-    os.path.dirname(__file__),
-    "expenses.db"
-)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.environ.get("EXPENSE_DB_PATH", "/data/expenses.db")
 
 CATEGORIES_PATH = os.path.join(
-    os.path.dirname(__file__),
+    BASE_DIR,
     "categories.json"
 )
 
-mcp = FastMCP("ExpenseTracker")
+mcp = FastMCP("expense-tracker")
+
+# ============================================================
+# LOCAL CONFIGURATION
+# ============================================================
+
+# DB_PATH = os.path.join(
+#     os.path.dirname(__file__),
+#     "expenses.db"
+# )
+
+# CATEGORIES_PATH = os.path.join(
+#     os.path.dirname(__file__),
+#     "categories.json"
+# )
+
+# mcp = FastMCP("demo-expense-tracker")
 
 
 # ============================================================
-# DATABASE HELPERS
+# DATABASE HELPERS for LOCAl
+# ============================================================
+
+# def get_connection():
+#     """Create and return a SQLite database connection."""
+
+#     conn = sqlite3.connect(DB_PATH)
+#     conn.row_factory = sqlite3.Row
+
+#     return conn
+
+
+# def init_db():
+#     """Create required database tables."""
+
+#     with get_connection() as c:
+
+#         # Expenses table
+#         c.execute("""
+#             CREATE TABLE IF NOT EXISTS expenses(
+#                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+#                 date TEXT NOT NULL,
+#                 amount REAL NOT NULL,
+#                 category TEXT NOT NULL,
+#                 subcategory TEXT DEFAULT '',
+#                 note TEXT DEFAULT ''
+#             )
+#         """)
+
+#         # Budgets table
+#         c.execute("""
+#             CREATE TABLE IF NOT EXISTS budgets(
+#                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+#                 month TEXT NOT NULL,
+#                 category TEXT NOT NULL,
+#                 amount REAL NOT NULL,
+#                 UNIQUE(month, category)
+#             )
+#         """)
+
+
+# init_db()
+# ============================================================
+# DATABASE HELPERS for PRODUCTION
 # ============================================================
 
 def get_connection():
     """Create and return a SQLite database connection."""
 
-    conn = sqlite3.connect(DB_PATH)
+    # Ensure the parent directory exists. In production, this directory
+    # must be a writable persistent volume supplied by the host.
+    db_directory = os.path.dirname(os.path.abspath(DB_PATH))
+    os.makedirs(db_directory, exist_ok=True)
+
+    conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
 
     return conn
@@ -67,7 +128,6 @@ def init_db():
 
 
 init_db()
-
 
 # ============================================================
 # VALIDATION HELPERS
@@ -1587,7 +1647,13 @@ def categories():
 
 
 # ============================================================
-# RUN MCP SERVER
+# RUN MCP SERVER ON LOCAL
+# ============================================================
+# if __name__ == "__main__":
+#     mcp.run()
+
+# ============================================================
+# RUN MCP SERVER ON PRODUCTION
 # ============================================================
 
 if __name__ == "__main__":
